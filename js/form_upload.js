@@ -1,3 +1,4 @@
+import { initEffectSlider, updateEffect } from './effects.js';
 const MAX_HASHTAGS = 5;
 const HASHTAG_REGEX = /^#[A-Za-z0-9а-яё]{1,19}$/i;
 const FORM_ERRORS = {
@@ -59,4 +60,14 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && isInFocus()) {
     event.stopPropagation();
   }
+});
+
+initEffectSlider();
+
+const effectRadios = document.querySelectorAll('.effects__radio');
+effectRadios.forEach((radio) => {
+  radio.addEventListener('change', () => {
+    const selectedEffect = radio.value;
+    updateEffect(selectedEffect);
+  });
 });
