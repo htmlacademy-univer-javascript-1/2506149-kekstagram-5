@@ -24,7 +24,7 @@ function createComment(id) {
   };
 }
 
-function createComments() {
+const createComments = () =>{
   const commentsCount = getRandomInt(0, 30);
   const comments = [];
 
@@ -33,7 +33,7 @@ function createComments() {
   }
 
   return comments;
-}
+};
 
 function createPhoto(id) {
   return {
@@ -45,7 +45,7 @@ function createPhoto(id) {
   };
 }
 
-export function createPhotosArray() {
+export const createPhotosArray = () =>{
   const photos = [];
 
   for (let i = 1; i <= 25; i++) {
@@ -53,4 +53,4 @@ export function createPhotosArray() {
   }
 
   return photos;
-}
+};
