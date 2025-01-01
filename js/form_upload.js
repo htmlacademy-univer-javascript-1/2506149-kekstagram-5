@@ -1,73 +1,134 @@
-import { initEffectSlider, updateEffect } from './effects.js';
+import {addEventListenerToScaleElements, removeEventListenerFromScaleElements, initializeEffects, resetEffects} from './effect_of_Image.js';
+import {isEscapeKey} from './util.js';
+import {sendDataToServer} from './api.js';
+import {displayErrorNotification, displaySuccessNotification} from './notifications.js';
+
 const MAX_HASHTAGS = 5;
-const HASHTAG_REGEX = /^#[A-Za-z0-9а-яё]{1,19}$/i;
-const FORM_ERRORS = {
-  DESCRIPTION_ERROR: 'Описание до 140 символов',
-  COUNT_EXCEEDED: `Максимальное количество хэштегов — ${MAX_HASHTAGS}`,
-  UNIQUE_HASTAGS: 'Хэш-теги повторяются',
-  INCORRECT_HASHTAG: 'Некорректный хэштег'
+const HASHTAG_PATTERN = /^#[a-zа-яё0-9]{1,19}$/i;
+const MAX_COMMENT_LENGTH = 140;
+const formErrorMessages = {
+  TOO_MANY_HASHTAGS: `Максимальное количество хэш-тегов — ${MAX_HASHTAGS}`,
+  DUPLICATE_HASHTAGS: 'Хэш-теги повторяются',
+  INVALID_HASHTAG: 'Некорректный хэш-тег. Хэш-тег начинается #, содержит только буквы и цифры',
+  COMMENT_TOO_LONG: `Комментарий не может превышать ${MAX_COMMENT_LENGTH} символов.`
 };
-const body = document.querySelector('body');
-const uploadForm = document.querySelector('.img-upload__form');
-const modalOverlay = uploadForm.querySelector('.img-upload__overlay');
-const hashtagInput = uploadForm.querySelector('.text__hashtags');
-const descriptionInput = uploadForm.querySelector('.text__description');
-const pristineValidator = new Pristine(uploadForm, {
+const SUPPORTED_FILE_TYPES = ['jpg', 'jpeg', 'png'];
+const submitButtonText = {
+  DEFAULT: 'Опубликовать',
+  UPLOADING: 'Публикую...'
+};
+const documentBody = document.body;
+const imageUploadForm = document.querySelector('.img-upload__form');
+const modalWindowOverlay = document.querySelector('.img-upload__overlay');
+const cancelUploadButton = document.querySelector('.img-upload__cancel');
+const hashtagInputField = document.querySelector('.text__hashtags');
+const commentInputField = document.querySelector('.text__description');
+const submitUploadButton = document.querySelector('.img-upload__submit');
+const fileInputField = document.querySelector('.img-upload__input');
+const imagePreview = document.querySelector('.img-upload__preview img');
+const effectPreviews = document.querySelectorAll('.effects__preview');
+const pristineFormValidator = new Pristine (imageUploadForm, {
   classTo: 'img-upload__field-wrapper',
   errorTextParent: 'img-upload__field-wrapper',
 });
-const showForm = () => {
-  modalOverlay.classList.remove('hidden');
-  body.classList.add('modal-open');
-  document.addEventListener('keydown', handleKeydown);
+
+const resetFormAndCloseModal = () => {
+  imageUploadForm.reset();
+  pristineFormValidator.reset();
+  removeEventListenerFromScaleElements();
+  resetEffects();
+  modalWindowOverlay.classList.add('hidden');
+  documentBody.classList.remove('modal-open');
+  document.removeEventListener('keydown', handleDocumentKeydown);
 };
 
-const closeForm = () => {
-  uploadForm.reset();
-  pristineValidator.reset();
-  modalOverlay.classList.add('hidden');
-  body.classList.remove('modal-open');
-  document.removeEventListener('keydown', handleKeydown);
+const isValidFileType = (file) => SUPPORTED_FILE_TYPES.some((type) => file.name.toLowerCase().endsWith(type));
+const isFieldFocused = () => document.activeElement === hashtagInputField || document.activeElement === commentInputField;
+
+const setupImagePreview = () => {
+  const file = fileInputField.files[0];
+  if (file && isValidFileType(file)) {
+    imagePreview.src = URL.createObjectURL(file);
+    effectPreviews.forEach((preview) => {
+      preview.style.backgroundImage = `url('${imagePreview.src}')`;
+    });
+  }
+  addEventListenerToScaleElements();
+  initializeEffects();
+  modalWindowOverlay.classList.remove('hidden');
+  documentBody.classList.add('modal-open');
+  document.addEventListener('keydown', handleDocumentKeydown);
 };
 
-const splitHashtags = (inputString) => inputString.trim().split(' ').filter((tag) => Boolean(tag.length));
-const isInFocus = () => document.activeElement === hashtagInput || document.activeElement === descriptionInput;
-const validateHashtagCount = (value) => splitHashtags(value).length <= MAX_HASHTAGS;
-const validateHashtags = (value) => splitHashtags(value).every((tag) => HASHTAG_REGEX.test(tag));
-const validateUniqueHashtags = (value) => {
-  const hashtags = splitHashtags(value).map((tag) => tag.toLowerCase());
-  return hashtags.length === new Set(hashtags).size;
-};
-function handleKeydown (event) {
-  if (event.key === 'Escape' && !isInFocus()) {
+function handleDocumentKeydown(event) {
+  if (isEscapeKey(event) && !isFieldFocused()) {
     event.preventDefault();
-    closeForm();
+    resetFormAndCloseModal();
   }
 }
 
-function handleInputChange (event) {
-  if (event.target.files.length) {
-    showForm();
-  }
-}
-pristineValidator.addValidator(hashtagInput, validateUniqueHashtags, FORM_ERRORS.UNIQUE_HASTAGS);
-pristineValidator.addValidator(hashtagInput, validateHashtags, FORM_ERRORS.INCORRECT_HASHTAG);
-pristineValidator.addValidator(hashtagInput, validateHashtagCount, FORM_ERRORS.COUNT_EXCEEDED);
-pristineValidator.addValidator(descriptionInput, (value) => value.length <= 140, FORM_ERRORS.DESCRIPTION_ERROR);
-uploadForm.querySelector('.img-upload__input').addEventListener('change', handleInputChange);
-uploadForm.querySelector('.img-upload__cancel').addEventListener('click', closeForm);
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && isInFocus()) {
-    event.stopPropagation();
-  }
-});
+const closeModalOnCancelClick = () => resetFormAndCloseModal();
+const parseHashtags = (input) => input.trim().split(/\s+/).filter((tag) => tag.length > 0);
 
-initEffectSlider();
+const validateHashtagContent = (value) => {
+  const hashtags = parseHashtags(value);
+  const isWithinLimit = hashtags.length <= MAX_HASHTAGS;
+  const areValidTags = hashtags.every((tag) => HASHTAG_PATTERN.test(tag));
+  const areUniqueTags = hashtags.length === new Set(hashtags.map((tag) => tag.toLowerCase())).size;
+  return { isWithinLimit, areValidTags, areUniqueTags };
+};
 
-const effectRadios = document.querySelectorAll('.effects__radio');
-effectRadios.forEach((radio) => {
-  radio.addEventListener('change', () => {
-    const selectedEffect = radio.value;
-    updateEffect(selectedEffect);
+const isValidHashtagInput = (value) => {
+  const { isWithinLimit, areValidTags, areUniqueTags } = validateHashtagContent(value);
+  return isWithinLimit && areValidTags && areUniqueTags;
+};
+
+const isValidComment = (value) => value.length <= MAX_COMMENT_LENGTH;
+
+const getHashtagValidationMessage = (value) => {
+  const { isWithinLimit, areValidTags, areUniqueTags } = validateHashtagContent(value);
+  if (!areValidTags) {
+    return formErrorMessages.INVALID_HASHTAG;
+  } else if (!areUniqueTags) {
+    return formErrorMessages.DUPLICATE_HASHTAGS;
+  } else if (!isWithinLimit) {
+    return formErrorMessages.TOO_MANY_HASHTAGS;
+  }
+  return true;
+};
+
+const updateSubmitButtonState = (isDisabled, buttonText) => {
+  submitUploadButton.disabled = isDisabled;
+  submitUploadButton.textContent = buttonText;
+};
+const disableSubmitButton = () => {
+  updateSubmitButtonState(true, submitButtonText.UPLOADING);
+};
+const enableSubmitButton = () => {
+  updateSubmitButtonState(false, submitButtonText.DEFAULT);
+};
+
+const setupFormSubmission = (onSuccessCallback) => {
+  imageUploadForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (pristineFormValidator.validate()) {
+      disableSubmitButton();
+      sendDataToServer(new FormData(event.target))
+        .then(() => {
+          displaySuccessNotification();
+          onSuccessCallback();
+        })
+        .catch(() => {
+          displayErrorNotification();
+        })
+        .finally(enableSubmitButton);
+    }
   });
-});
+};
+
+pristineFormValidator.addValidator(hashtagInputField, isValidHashtagInput, getHashtagValidationMessage);
+
+pristineFormValidator.addValidator(commentInputField, isValidComment, formErrorMessages.COMMENT_TOO_LONG);
+imageUploadForm.addEventListener('change', setupImagePreview);
+cancelUploadButton.addEventListener('click', closeModalOnCancelClick);
+export { setupFormSubmission, resetFormAndCloseModal };
