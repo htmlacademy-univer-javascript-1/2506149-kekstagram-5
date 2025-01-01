@@ -1,68 +1,82 @@
-const bigPictureElement = document.querySelector('.big-picture');
-const bodyElement = document.body;
-const bigPictureImg = bigPictureElement.querySelector('.big-picture__img img');
-const likesCount = bigPictureElement.querySelector('.likes-count');
-const commentsCount = bigPictureElement.querySelector('.comments-count');
-const socialCaption = bigPictureElement.querySelector('.social__caption');
-const loadCommentsButton = bigPictureElement.querySelector('.comments-loader');
-const commentsList = bigPictureElement.querySelector('.social__comments');
-const commentTemplate = commentsList.querySelector('.social__comment');
-const commentsCountData = bigPictureElement.querySelector('.social__comment-count');
-const COMMENTS_STEP = 5;
-let displayCommentsCount = 0;
-let allComments = [];
+import { isEscape } from './util.js';
+const COMMENTS_BATCH_SIZE = 5;
+const bigPictureContainer = document.querySelector('.big-picture');
+const closeButtonElement = document.querySelector('.big-picture__cancel');
+const bigPictureImage = document.querySelector('.big-picture__img').querySelector('img');
+const likesCountElement = document.querySelector('.likes-count');
+const captionElement = document.querySelector('.social__caption');
+const commentsListElement = document.querySelector('.social__comments');
+const commentItemTemplate = document.querySelector('.social__comment');
+const loadMoreCommentsButton = document.querySelector('.comments-loader');
+const commentsCounterElement = document.querySelector('.social__comment-count');
+let selectedPhoto;
+let currentCommentBatchIndex = 0;
 
-const closeBigPicture = () => {
-  bigPictureElement.classList.add('hidden');
-  bodyElement.classList.remove('modal-open');
-};
-const onEscKeyPress = (evt) => {
-  if (evt.key === 'Escape') {
-    evt.preventDefault();
-    closeBigPicture();
-    document.removeEventListener('keydown', onEscKeyPress);
-  }
+const clearComments = () => {
+  commentsListElement.innerHTML = '';
 };
 
-const createCommentItem = (comment) => {
-  const commentElement = commentTemplate.cloneNode(true);
-  commentElement.querySelector('.social__picture').src = comment.avatar;
-  commentElement.querySelector('.social__picture').alt = comment.name;
-  commentElement.querySelector('.social__text').textContent = comment.message;
-  return commentElement;
+const createComment = (comment) => {
+  const newComment = commentItemTemplate.cloneNode(true);
+  const userAvatar = newComment.querySelector('.social__picture');
+  userAvatar.src = comment.avatar;
+  userAvatar.alt = comment.name;
+  newComment.querySelector('.social__text').textContent = comment.message;
+  return newComment;
 };
+
 const displayComments = () => {
-  commentsList.innerHTML = '';
-  const commentsFragment = document.createDocumentFragment();
-  displayCommentsCount = Math.min(displayCommentsCount, allComments.length);
-  const commentsToDisplay = allComments.slice(0, displayCommentsCount);
-  commentsCountData.innerHTML = `${displayCommentsCount} из <span class="comments-count">${allComments.length}</span> комментариев`;
-  if (allComments.length <= COMMENTS_STEP || displayCommentsCount >= allComments.length) {
-    loadCommentsButton.classList.add('hidden');
-  } else {
-    loadCommentsButton.classList.remove('hidden');
+  let lastIndex = 0;
+  for (let i = currentCommentBatchIndex; i < currentCommentBatchIndex + COMMENTS_BATCH_SIZE; i++) {
+    if (i === selectedPhoto.comments.length) {
+      loadMoreCommentsButton.classList.add('hidden');
+      lastIndex = i - 1;
+      break;
+    }
+    lastIndex = i;
+    commentsListElement.appendChild(createComment(selectedPhoto.comments[i]));
   }
-  commentsToDisplay.forEach((comment) => {
-    commentsFragment.appendChild(createCommentItem(comment));
-  });
-  commentsList.appendChild(commentsFragment);
+  currentCommentBatchIndex = lastIndex + 1;
+  commentsCounterElement.innerHTML = `${currentCommentBatchIndex} из <span class="comments-count">${selectedPhoto.comments.length}</span> комментариев`;
 };
-const onLoadMoreCommentsClick = () => {
-  displayCommentsCount += COMMENTS_STEP;
+
+const updatePhoto = () => {
+  bigPictureImage.src = selectedPhoto.url;
+  likesCountElement.textContent = selectedPhoto.likes;
+  captionElement.textContent = selectedPhoto.description;
+  clearComments();
+  currentCommentBatchIndex = 0;
   displayComments();
 };
 
-export const openBigPicture = (photo) => {
-  bigPictureImg.src = photo.url;
-  likesCount.textContent = photo.likes;
-  commentsCount.textContent = photo.comments.length;
-  socialCaption.textContent = photo.description;
-  allComments = photo.comments.slice();
-  displayCommentsCount = Math.min(COMMENTS_STEP, allComments.length);
-  displayComments();
-  bigPictureElement.classList.remove('hidden');
-  bodyElement.classList.add('modal-open');
-  document.addEventListener('keydown', onEscKeyPress);
-  bigPictureElement.querySelector('.big-picture__cancel').addEventListener('click', closeBigPicture);
-  loadCommentsButton.addEventListener('click', onLoadMoreCommentsClick);
+const onKeyDown = (evt) => {
+  if (isEscape(evt)) {
+    evt.preventDefault();
+    closeBigPost();
+  }
 };
+
+const onCloseButtonClick = () => closeBigPost();
+const onLoadMoreCommentsClick = () => displayComments();
+
+const openBigPicture = (post) => {
+  bigPictureContainer.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  document.addEventListener('keydown', onKeyDown);
+  closeButtonElement.addEventListener('click', onCloseButtonClick);
+  loadMoreCommentsButton.addEventListener('click', onLoadMoreCommentsClick);
+  selectedPhoto = post;
+  updatePhoto();
+};
+
+function closeBigPost() {
+  bigPictureContainer.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  loadMoreCommentsButton.classList.remove('hidden');
+  document.removeEventListener('keydown', onKeyDown);
+  closeButtonElement.removeEventListener('click', onCloseButtonClick);
+  loadMoreCommentsButton.removeEventListener('click', onLoadMoreCommentsClick);
+  currentCommentBatchIndex = 0;
+}
+
+export { openBigPicture };
