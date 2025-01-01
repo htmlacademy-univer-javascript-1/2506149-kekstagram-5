@@ -1,4 +1,4 @@
-const ImageEffect = {
+const Effect = {
   DEFAULT: 'none',
   CHROME: 'chrome',
   SEPIA: 'sepia',
@@ -6,9 +6,8 @@ const ImageEffect = {
   PHOBOS: 'phobos',
   HEAT: 'heat'
 };
-
-const effectSettings = {
-  [ImageEffect.CHROME]: {
+const effectProperties = {
+  [Effect.CHROME]: {
     filter: 'grayscale',
     unit: '',
     slider: {
@@ -17,7 +16,7 @@ const effectSettings = {
       step: 0.1
     }
   },
-  [ImageEffect.SEPIA]: {
+  [Effect.SEPIA]: {
     filter: 'sepia',
     unit: '',
     slider: {
@@ -26,7 +25,7 @@ const effectSettings = {
       step: 0.1
     }
   },
-  [ImageEffect.MARVIN]: {
+  [Effect.MARVIN]: {
     filter: 'invert',
     unit: '%',
     slider: {
@@ -35,7 +34,7 @@ const effectSettings = {
       step: 1
     }
   },
-  [ImageEffect.PHOBOS]: {
+  [Effect.PHOBOS]: {
     filter: 'blur',
     unit: 'px',
     slider: {
@@ -44,7 +43,7 @@ const effectSettings = {
       step: 0.1
     }
   },
-  [ImageEffect.HEAT]: {
+  [Effect.HEAT]: {
     filter: 'brightness',
     unit: '',
     slider: {
@@ -53,101 +52,90 @@ const effectSettings = {
       step: 0.1
     }
   },
-  [ImageEffect.DEFAULT]: {
+  [Effect.DEFAULT]: {
     filter: null,
     unit: ''
   }
 };
 
-const uploadModalElement = document.querySelector('.img-upload');
-const previewImageElement = document.querySelector('.img-upload__preview img');
-const effectLevelInput = document.querySelector('.effect-level__value');
-const effectSliderElement = document.querySelector('.effect-level__slider');
-const effectSliderWrapper = document.querySelector('.img-upload__effect-level');
-const zoomOutButton = document.querySelector('.scale__control--smaller');
-const zoomInButton = document.querySelector('.scale__control--bigger');
-const zoomLevelInput = document.querySelector('.scale__control--value');
-const ZOOM_INCREMENT = 25;
-const MIN_ZOOM_PERCENTAGE = 25;
-const MAX_ZOOM_PERCENTAGE = 100;
-const FULL_ZOOM_SCALE = 100;
-
-let activeEffect = ImageEffect.DEFAULT;
-
+const modalElement = document.querySelector('.img-upload');
+const previewImage = document.querySelector('.img-upload__preview img');
+const effectLevelValue = document.querySelector('.effect-level__value');
+const effectSliderContainer = document.querySelector('.effect-level__slider');
+const sliderContainerElement = document.querySelector('.img-upload__effect-level');
+const buttonZoomSmall = document.querySelector('.scale__control--smaller');
+const buttonZoomBig = document.querySelector('.scale__control--bigger');
+const scaleControlValue = document.querySelector('.scale__control--value');
+const ZOOM_STEP = 25;
+const MIN_ZOOM_LEVEL = 25;
+const MAX_ZOOM_LEVEL = 100;
+const FULL_PERCENTAGE = 100;
+let chosenEffect = Effect.DEFAULT;
 const updateStyle = () => {
-  const { filter, unit } = effectSettings[activeEffect];
-  previewImageElement.style.filter = activeEffect === ImageEffect.DEFAULT ? null : `${filter}(${effectLevelInput.value}${unit})`;
+  const { filter, unit } = effectProperties[chosenEffect];
+  previewImage.style.filter = chosenEffect === Effect.DEFAULT ? null : `${filter}(${effectLevelValue.value}${unit})`;
 };
-
 const sliderEventHandler = () => {
-  effectLevelInput.value = effectSliderElement.noUiSlider.get();
+  effectLevelValue.value = effectSliderContainer.noUiSlider.get();
   updateStyle();
 };
-
-const initializeSlider = ({ min, max, step }) => {
-  noUiSlider.create(effectSliderElement, {
-    range: { min, max },
+const initializeSlider = ({min, max, step}) => {
+  noUiSlider.create(effectSliderContainer, {
+    range: {min, max},
     step,
     start: max,
     connect: 'lower'
   });
-  effectSliderElement.noUiSlider.on('update', sliderEventHandler);
+  effectSliderContainer.noUiSlider.on('update', sliderEventHandler);
 };
-
 const configureSlider = () => {
-  if (activeEffect !== ImageEffect.DEFAULT) {
-    const { slider } = effectSettings[activeEffect];
-    if (effectSliderElement.noUiSlider) {
-      effectSliderElement.noUiSlider.destroy();
+  if (chosenEffect !== Effect.DEFAULT) {
+    const { slider } = effectProperties[chosenEffect];
+    if (effectSliderContainer.noUiSlider) {
+      effectSliderContainer.noUiSlider.destroy();
     }
     initializeSlider(slider);
-    effectSliderWrapper.classList.remove('hidden');
+    sliderContainerElement.classList.remove('hidden');
   } else {
-    effectSliderElement.noUiSlider?.destroy();
-    effectSliderWrapper.classList.add('hidden');
+    effectSliderContainer.noUiSlider?.destroy();
+    sliderContainerElement.classList.add('hidden');
   }
   updateStyle();
 };
-
 const applyEffect = (effect) => {
-  activeEffect = effect;
+  chosenEffect = effect;
   configureSlider();
 };
-
 const reset = () => {
-  applyEffect(ImageEffect.DEFAULT);
+  applyEffect(Effect.DEFAULT);
 };
-
 const onEffectsChange = (evt) => {
   applyEffect(evt.target.value);
 };
-
 const onChangeZoomImage = (increment) => {
-  let currentZoomValue = parseInt(zoomLevelInput.value, 10);
-  if ((increment && currentZoomValue < MAX_ZOOM_PERCENTAGE) || (!increment && currentZoomValue > MIN_ZOOM_PERCENTAGE)) {
-    currentZoomValue += increment ? ZOOM_INCREMENT : -ZOOM_INCREMENT;
-    zoomLevelInput.value = `${currentZoomValue.toString()}%`;
-    previewImageElement.style.transform = `scale(${currentZoomValue / FULL_ZOOM_SCALE})`;
+  let currentScaleValue = parseInt(scaleControlValue.value, 10);
+  if ((increment && currentScaleValue < MAX_ZOOM_LEVEL) || (!increment && currentScaleValue > MIN_ZOOM_LEVEL)) {
+    currentScaleValue += increment ? ZOOM_STEP : -ZOOM_STEP;
+    scaleControlValue.value = `${currentScaleValue.toString()}%`;
+    previewImage.style.transform = `scale(${currentScaleValue / FULL_PERCENTAGE})`;
   }
 };
-
 const onZoomOutButton = () => onChangeZoomImage(false);
 const onZoomInButton = () => onChangeZoomImage(true);
 
 const addEventListenerToScaleElemets = () => {
-  zoomOutButton.addEventListener('click', onZoomOutButton);
-  zoomInButton.addEventListener('click', onZoomInButton);
+  buttonZoomSmall.addEventListener('click', onZoomOutButton);
+  buttonZoomBig.addEventListener('click', onZoomInButton);
 };
 
 const removeEventListenerFromScaleElemets = () => {
-  zoomOutButton.removeEventListener('click', onZoomOutButton);
-  zoomInButton.removeEventListener('click', onZoomInButton);
+  buttonZoomSmall.removeEventListener('click', onZoomOutButton);
+  buttonZoomBig.removeEventListener('click', onZoomInButton);
 };
-
 const init = () => {
   configureSlider();
-  uploadModalElement.querySelector('.effects').addEventListener('change', onEffectsChange);
+  modalElement.querySelector('.effects').addEventListener('change', onEffectsChange);
   addEventListenerToScaleElemets();
 };
 
-export { addEventListenerToScaleElemets, removeEventListenerFromScaleElemets, init, reset };
+export {addEventListenerToScaleElemets, removeEventListenerFromScaleElemets, init, reset };

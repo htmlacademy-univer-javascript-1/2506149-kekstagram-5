@@ -2,15 +2,15 @@ import { renderThumbnails } from './photos.js';
 import { getData } from './api.js';
 import { showAlert, debounce } from './util.js';
 
-const FILTER_DEBOUNCE_DELAY = 500;
-const RANDOM_IMAGE_COUNT = 10;
-const ACTIVE_FILTER_BUTTON_CLASS = 'img-filters__button--active';
-const FILTER_ID_DEFAULT = 'filter-default';
-const FILTER_ID_RANDOM = 'filter-random';
-const FILTER_ID_DISCUSSED = 'filter-discussed';
-const filterButtonElements = document.body.querySelectorAll('.img-filters__button');
-let currentActiveFilterId = FILTER_ID_DEFAULT;
-let activeFilterButtonElement = document.getElementById(FILTER_ID_DEFAULT);
+const DEBOUNCE_DELAY = 500;
+const RANDOM_PICTURE_COUNT = 10;
+const ACTIVE_FILTER_CLASS = 'img-filters__button--active';
+const DEFAULT_FILTER_ID = 'filter-default';
+const RANDOM_FILTER_ID = 'filter-random';
+const DISCUSSED_FILTER_ID = 'filter-discussed';
+const filterButtons = document.body.querySelectorAll('.img-filters__button');
+let currentFilterId = DEFAULT_FILTER_ID;
+let activeFilterButton = document.getElementById(DEFAULT_FILTER_ID);
 
 const getRandomImages = (imageArray, count) => {
   if (imageArray.length <= count) {
@@ -26,19 +26,19 @@ const getRandomImages = (imageArray, count) => {
   }
   return randomImages;
 };
-
 const filterImages = (images) => {
-  switch (currentActiveFilterId) {
-    case FILTER_ID_DEFAULT:
+  switch (currentFilterId) {
+    case DEFAULT_FILTER_ID:
       return images;
-    case FILTER_ID_DISCUSSED:
+    case DISCUSSED_FILTER_ID:
       return images.slice().sort((a, b) => b.comments.length - a.comments.length);
-    case FILTER_ID_RANDOM:
-      return getRandomImages(images, RANDOM_IMAGE_COUNT);
+    case RANDOM_FILTER_ID:
+      return getRandomImages(images, RANDOM_PICTURE_COUNT);
     default:
       return images;
   }
 };
+
 
 const updateImageDisplay = (images) => {
   const filteredImages = filterImages(images);
@@ -46,19 +46,21 @@ const updateImageDisplay = (images) => {
   renderThumbnails(filteredImages);
 };
 
+
 const filterButtonClickHandler = (callback) => (evt) => {
-  currentActiveFilterId = evt.target.id;
-  activeFilterButtonElement.classList.remove(ACTIVE_FILTER_BUTTON_CLASS);
-  activeFilterButtonElement = evt.target;
-  activeFilterButtonElement.classList.add(ACTIVE_FILTER_BUTTON_CLASS);
+  currentFilterId = evt.target.id;
+  activeFilterButton.classList.remove(ACTIVE_FILTER_CLASS);
+  activeFilterButton = evt.target;
+  activeFilterButton.classList.add(ACTIVE_FILTER_CLASS);
   callback();
 };
+
 
 getData()
   .then((images) => {
     renderThumbnails(images);
     document.querySelector('.img-filters').classList.remove('img-filters--inactive');
-    const onFilterClick = filterButtonClickHandler(debounce(() => updateImageDisplay(images), FILTER_DEBOUNCE_DELAY));
-    filterButtonElements.forEach((filterButton) => filterButton.addEventListener('click', onFilterClick));
+    const onFilterClick = filterButtonClickHandler(debounce(() => updateImageDisplay(images), DEBOUNCE_DELAY));
+    filterButtons.forEach((filterButton) => filterButton.addEventListener('click', onFilterClick));
   })
   .catch((error) => showAlert(error.message));

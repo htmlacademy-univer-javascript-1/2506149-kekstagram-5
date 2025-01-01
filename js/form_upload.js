@@ -1,134 +1,135 @@
-import {addEventListenerToScaleElements, removeEventListenerFromScaleElements, initializeEffects, resetEffects} from './effect_of_Image.js';
-import {isEscapeKey} from './util.js';
-import {sendDataToServer} from './api.js';
-import {displayErrorNotification, displaySuccessNotification} from './notifications.js';
+import {addEventListenerToScaleElemets, removeEventListenerFromScaleElemets, init, reset} from './effect_of_Image.js';
+import {isEscape} from './util.js';
+import {sendData} from './api.js';
+import {showError, showSuccess} from './notifications.js';
 
 const MAX_HASHTAGS = 5;
-const HASHTAG_PATTERN = /^#[a-zа-яё0-9]{1,19}$/i;
+const HASHTAG_REGEX = /^#[a-zа-яё0-9]{1,19}$/i;
 const MAX_COMMENT_LENGTH = 140;
-const formErrorMessages = {
-  TOO_MANY_HASHTAGS: `Максимальное количество хэш-тегов — ${MAX_HASHTAGS}`,
-  DUPLICATE_HASHTAGS: 'Хэш-теги повторяются',
-  INVALID_HASHTAG: 'Некорректный хэш-тег. Хэш-тег начинается #, содержит только буквы и цифры',
+const formErrors = {
+  COUNT_EXCEEDED: `Максимальное количество хэш-тегов — ${MAX_HASHTAGS}`,
+  UNIQUE_HASTAGS: 'Хэш-теги повторяются',
+  INCORRECT_HASHTAG: 'Некорректный хэш-тег. Хэш-тег начинается #, содержит только буквы и цифры',
   COMMENT_TOO_LONG: `Комментарий не может превышать ${MAX_COMMENT_LENGTH} символов.`
 };
-const SUPPORTED_FILE_TYPES = ['jpg', 'jpeg', 'png'];
-const submitButtonText = {
-  DEFAULT: 'Опубликовать',
-  UPLOADING: 'Публикую...'
+const FILE_TYPES = ['jpg', 'jpeg', 'png'];
+const textSubmit = {
+  IDLE: 'Опубликовать',
+  SENDING: 'Публикую...'
 };
-const documentBody = document.body;
-const imageUploadForm = document.querySelector('.img-upload__form');
-const modalWindowOverlay = document.querySelector('.img-upload__overlay');
-const cancelUploadButton = document.querySelector('.img-upload__cancel');
-const hashtagInputField = document.querySelector('.text__hashtags');
-const commentInputField = document.querySelector('.text__description');
-const submitUploadButton = document.querySelector('.img-upload__submit');
-const fileInputField = document.querySelector('.img-upload__input');
-const imagePreview = document.querySelector('.img-upload__preview img');
-const effectPreviews = document.querySelectorAll('.effects__preview');
-const pristineFormValidator = new Pristine (imageUploadForm, {
+const body = document.body;
+const uploadForm = document.querySelector('.img-upload__form');
+const modalOverlay = document.querySelector('.img-upload__overlay');
+const uploadCancel = document.querySelector('.img-upload__cancel');
+const hashtagInput = document.querySelector('.text__hashtags');
+const descriptionInput = document.querySelector('.text__description');
+const uploadSubmit = document.querySelector('.img-upload__submit');
+const uploadInput = document.querySelector('.img-upload__input');
+const uploadPreview = document.querySelector('.img-upload__preview img');
+const effectsPreviews = document.querySelectorAll('.effects__preview');
+const pristineValidator = new Pristine (uploadForm, {
   classTo: 'img-upload__field-wrapper',
   errorTextParent: 'img-upload__field-wrapper',
 });
 
 const resetFormAndCloseModal = () => {
-  imageUploadForm.reset();
-  pristineFormValidator.reset();
-  removeEventListenerFromScaleElements();
-  resetEffects();
-  modalWindowOverlay.classList.add('hidden');
-  documentBody.classList.remove('modal-open');
-  document.removeEventListener('keydown', handleDocumentKeydown);
+  uploadForm.reset();
+  pristineValidator.reset();
+  removeEventListenerFromScaleElemets();
+  reset();
+  modalOverlay.classList.add('hidden');
+  body.classList.remove('modal-open');
+  document.removeEventListener('keydown', handleKeydown);
 };
 
-const isValidFileType = (file) => SUPPORTED_FILE_TYPES.some((type) => file.name.toLowerCase().endsWith(type));
-const isFieldFocused = () => document.activeElement === hashtagInputField || document.activeElement === commentInputField;
+const isValidType = (file) => FILE_TYPES.some((it) => file.name.toLowerCase().endsWith(it));
+const isInFocus = () => document.activeElement === hashtagInput || document.activeElement === descriptionInput;
 
-const setupImagePreview = () => {
-  const file = fileInputField.files[0];
-  if (file && isValidFileType(file)) {
-    imagePreview.src = URL.createObjectURL(file);
-    effectPreviews.forEach((preview) => {
-      preview.style.backgroundImage = `url('${imagePreview.src}')`;
+const onSetupImagePreview = () => {
+  const file = uploadInput.files[0];
+  if (file && isValidType(file)) {
+    uploadPreview.src = URL.createObjectURL(file);
+    effectsPreviews.forEach((value) => {
+      value.style.backgroundImage = `url('${uploadPreview.src}')`;
     });
   }
-  addEventListenerToScaleElements();
-  initializeEffects();
-  modalWindowOverlay.classList.remove('hidden');
-  documentBody.classList.add('modal-open');
-  document.addEventListener('keydown', handleDocumentKeydown);
+  addEventListenerToScaleElemets();
+  init();
+  modalOverlay.classList.remove('hidden');
+  body.classList.add('modal-open');
+  document.addEventListener('keydown', handleKeydown);
 };
 
-function handleDocumentKeydown(event) {
-  if (isEscapeKey(event) && !isFieldFocused()) {
-    event.preventDefault();
+function handleKeydown(evt) {
+  if (isEscape(evt) && !isInFocus()) {
+    evt.preventDefault();
     resetFormAndCloseModal();
   }
 }
 
-const closeModalOnCancelClick = () => resetFormAndCloseModal();
-const parseHashtags = (input) => input.trim().split(/\s+/).filter((tag) => tag.length > 0);
 
-const validateHashtagContent = (value) => {
-  const hashtags = parseHashtags(value);
-  const isWithinLimit = hashtags.length <= MAX_HASHTAGS;
-  const areValidTags = hashtags.every((tag) => HASHTAG_PATTERN.test(tag));
-  const areUniqueTags = hashtags.length === new Set(hashtags.map((tag) => tag.toLowerCase())).size;
-  return { isWithinLimit, areValidTags, areUniqueTags };
+const onCloseFormCancel = () => resetFormAndCloseModal();
+const parseHashtagString = (tagString) => tagString.trim().split(/\s+/).filter((tag) => tag.length > 0);
+
+const validateHashtags = (value) => {
+  const tags = parseHashtagString(value);
+  const isValidCount = tags.length <= MAX_HASHTAGS;
+  const isValidTags = tags.every((tag) => HASHTAG_REGEX.test(tag));
+  const isUniqueTags = tags.length === new Set(tags.map((tag) => tag.toLowerCase())).size;
+  return { isValidCount, isValidTags, isUniqueTags };
 };
 
-const isValidHashtagInput = (value) => {
-  const { isWithinLimit, areValidTags, areUniqueTags } = validateHashtagContent(value);
-  return isWithinLimit && areValidTags && areUniqueTags;
+const validateCorrectHashtag = (value) => {
+  const { isValidCount, isValidTags, isUniqueTags } = validateHashtags(value);
+  return isValidCount && isValidTags && isUniqueTags;
 };
 
-const isValidComment = (value) => value.length <= MAX_COMMENT_LENGTH;
 
-const getHashtagValidationMessage = (value) => {
-  const { isWithinLimit, areValidTags, areUniqueTags } = validateHashtagContent(value);
-  if (!areValidTags) {
-    return formErrorMessages.INVALID_HASHTAG;
-  } else if (!areUniqueTags) {
-    return formErrorMessages.DUPLICATE_HASHTAGS;
-  } else if (!isWithinLimit) {
-    return formErrorMessages.TOO_MANY_HASHTAGS;
+const validateComment = (value) => value.length <= MAX_COMMENT_LENGTH;
+
+const validateHashtagInput = (value) => {
+  const { isValidCount, isValidTags, isUniqueTags } = validateHashtags(value);
+  if (!isValidTags) {
+    return formErrors.INCORRECT_HASHTAG;
+  } else if (!isUniqueTags) {
+    return formErrors.UNIQUE_HASTAGS;
+  } else if (!isValidCount) {
+    return formErrors.COUNT_EXCEEDED;
   }
   return true;
 };
-
-const updateSubmitButtonState = (isDisabled, buttonText) => {
-  submitUploadButton.disabled = isDisabled;
-  submitUploadButton.textContent = buttonText;
+const toggleSubmitButton = (isDisabled, buttonText) => {
+  uploadSubmit.disabled = isDisabled;
+  uploadSubmit.textContent = buttonText;
 };
 const disableSubmitButton = () => {
-  updateSubmitButtonState(true, submitButtonText.UPLOADING);
+  toggleSubmitButton(true, textSubmit.SENDING);
 };
 const enableSubmitButton = () => {
-  updateSubmitButtonState(false, submitButtonText.DEFAULT);
+  toggleSubmitButton(false, textSubmit.IDLE);
 };
 
-const setupFormSubmission = (onSuccessCallback) => {
-  imageUploadForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    if (pristineFormValidator.validate()) {
+const onSetupUserFormSubmit = (onSuccess) => {
+  uploadForm.addEventListener('submit', (evt) => {
+    evt.preventDefault();
+    if (pristineValidator.validate()) {
       disableSubmitButton();
-      sendDataToServer(new FormData(event.target))
+      sendData(new FormData(evt.target))
         .then(() => {
-          displaySuccessNotification();
-          onSuccessCallback();
+          showSuccess();
+          onSuccess();
         })
         .catch(() => {
-          displayErrorNotification();
+          showError();
         })
         .finally(enableSubmitButton);
     }
   });
 };
 
-pristineFormValidator.addValidator(hashtagInputField, isValidHashtagInput, getHashtagValidationMessage);
+pristineValidator.addValidator(hashtagInput, validateCorrectHashtag, validateHashtagInput);
 
-pristineFormValidator.addValidator(commentInputField, isValidComment, formErrorMessages.COMMENT_TOO_LONG);
-imageUploadForm.addEventListener('change', setupImagePreview);
-cancelUploadButton.addEventListener('click', closeModalOnCancelClick);
-export { setupFormSubmission, resetFormAndCloseModal };
+pristineValidator.addValidator(descriptionInput, validateComment, formErrors.COMMENT_TOO_LONG);
+uploadForm.addEventListener('change', onSetupImagePreview);
+uploadCancel.addEventListener('click', onCloseFormCancel);
+export { onSetupUserFormSubmit, resetFormAndCloseModal };

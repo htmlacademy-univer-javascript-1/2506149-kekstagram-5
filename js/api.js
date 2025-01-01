@@ -1,28 +1,28 @@
-const API_URL = 'https://29.javascript.htmlacademy.pro/kekstagram';
-const Endpoints = {
-  FETCH_PHOTOS: '/data',
-  SUBMIT_FORM: '/',
+const BASE_URL = 'https://29.javascript.htmlacademy.pro/kekstagram';
+const Route = {
+  GET_DATA: '/data',
+  SEND_DATA: '/',
 };
-const HttpMethods = {
+const Method = {
   GET: 'GET',
   POST: 'POST',
 };
-const ErrorMessages = {
-  FETCH_PHOTOS: 'Не удалось загрузить данные. Попробуйте обновить страницу.',
-  SUBMIT_FORM: 'Не удалось отправить форму. Попробуйте снова.',
+const ErrorText = {
+  GET_DATA: 'Не удалось загрузить данные. Попробуйте обновить страницу.',
+  SEND_DATA: 'Не удалось отправить форму. Попробуйте снова.',
 };
 
-const request = (endpoint, errorMessage, method = HttpMethods.GET, body = null) =>
-  fetch(`${API_URL}${endpoint}`, { method, body })
+const load = (route, errorText, method = Method.GET, body = null) =>
+  fetch(`${BASE_URL}${route}`, { method, body })
     .then((response) => {
       if (!response.ok) {
-        throw new Error(errorMessage);
+        throw new Error(errorText);
       }
       return response.json();
     });
 
-const fetchPhotos = () => request(Endpoints.FETCH_PHOTOS, ErrorMessages.FETCH_PHOTOS);
+const getData = () => load(Route.GET_DATA, ErrorText.GET_DATA);
 
-const submitForm = (formData) => request(Endpoints.SUBMIT_FORM, ErrorMessages.SUBMIT_FORM, HttpMethods.POST, formData);
+const sendData = (body) => load(Route.SEND_DATA, ErrorText.SEND_DATA, Method.POST, body);
 
-export { fetchPhotos, submitForm };
+export { getData, sendData };
