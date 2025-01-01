@@ -1,14 +1,17 @@
-import {renderThumbnails} from './photos.js';
+import { initEditPopup } from './edit-popup.js';
 import { getData } from './api.js';
-import { showAlert } from './util.js';
-import { onSetupUserFormSubmit, resetFormAndCloseModal } from'./form_upload.js';
-import './filter_for_photos.js';
+import { showAlert } from './message.js';
+import { showFilteredPhotos } from './filter-dashboard.js';
+import { closeEditPopup, setFormSubmit } from './edit-popup.js';
 
 getData()
-  .then((photos) => {
-    renderThumbnails(photos);
+  .then((thumbnails) => {
+    showFilteredPhotos(thumbnails);
   })
-  .catch((error) => {
-    showAlert(error.message);
-  });
-onSetupUserFormSubmit(resetFormAndCloseModal);
+  .catch(
+    () => {
+      showAlert('Проблемы с сервером: не удалось загрузить данные. Попробуйте обновить страницу!');
+    }
+  );
+setFormSubmit(closeEditPopup);
+initEditPopup();

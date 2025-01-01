@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="vendor/nouislider/nouislider.css">
   <link rel="stylesheet" href="css/normalize.css">
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="vendor/nouislider/nouislider.css">
   <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
   <title>Кекстаграм</title>
 </head>
@@ -31,11 +31,11 @@
       <section class="img-upload">
         <div class="img-upload__wrapper">
           <h2 class="img-upload__title  visually-hidden">Загрузка фотографии</h2>
-          <form class="img-upload__form" id="upload-select-image" method="POST" action="https://29.javascript.htmlacademy.pro/kekstagram" enctype="multipart/form-data" autocomplete="off">
+          <form class="img-upload__form" id="upload-select-image" method="post" enctype="multipart/form-data" action="https://29.javascript.pages.academy/kekstagram" autocomplete="off">
 
             <!-- Изначальное состояние поля для загрузки изображения -->
             <fieldset class="img-upload__start">
-              <input type="file" id="upload-file" class="img-upload__input  visually-hidden" name="filename" required>
+              <input type="file" id="upload-file" class="img-upload__input  visually-hidden" name="filename" accept="image/*" required>
               <label for="upload-file" class="img-upload__label  img-upload__control">Загрузить</label>
             </fieldset>
 
@@ -53,12 +53,12 @@
 
                   <!-- Предварительный просмотр изображения -->
                   <div class="img-upload__preview">
-                    <img src="img/upload-default-image.jpg" alt="Предварительный просмотр фотографии">
+                    <img src="" alt="Предварительный просмотр фотографии">
                   </div>
 
                   <!-- Изменение глубины эффекта, накладываемого на изображение -->
                   <fieldset class="img-upload__effect-level  effect-level">
-                    <input class="effect-level__value" type="number" step="any" name="effect-level" value="">
+                    <input class="effect-level__value" type="number" step="any" name="effect-level" value="" placeholder="red">
                     <div class="effect-level__slider"></div>
                   </fieldset>
 
@@ -117,10 +117,12 @@
                 <!-- Добавление хэш-тегов и комментария к изображению -->
                 <fieldset class="img-upload__text text">
                   <div class="img-upload__field-wrapper">
-                    <input class="text__hashtags" name="hashtags" placeholder="#ХэшТег">
+                    <input type="text" class="text__hashtags" name="hashtags" placeholder="#ХэшТег"
+                    data-pristine-maxlength-message="Хештегов должно быть пять!">
                   </div>
                   <div class="img-upload__field-wrapper">
-                    <textarea class="text__description" name="description" placeholder="Ваш комментарий..." maxlengthPristine="140"></textarea>
+                    <textarea type="text" class="text__description" name="description" placeholder="Ваш комментарий..." data-pristine-maxlength="140"
+                    data-pristine-maxlength-message="Комментарий должен быть короче 140 символов!"></textarea>
                   </div>
                 </fieldset>
 
@@ -150,12 +152,13 @@
         <div class="big-picture__social  social">
           <div class="social__header">
             <img class="social__picture" src="img/avatar-1.svg" alt="Аватар автора фотографии" width="35" height="35">
-            <p class="social__caption">Тестим новую камеру! =)</p>
+            <p class="social__caption">Тестим новую камеру!</p>
             <p class="social__likes">Нравится <span class="likes-count">356</span></p>
           </div>
 
+
           <!-- Комментарии к изображению -->
-          <div class="social__comment-count">5 из <span class="comments-count">125</span> комментариев</div>
+          <div class="social__comment-count"><span class="show-comment">5</span> из <span class="comments-count">125</span> комментариев</div>
           <ul class="social__comments">
             <li class="social__comment">
               <img class="social__picture" src="img/avatar-4.svg" alt="Аватар комментатора фотографии" width="35" height="35">
@@ -167,8 +170,15 @@
             </li>
           </ul>
 
+          <template id="comment">
+            <li class="social__comment">
+              <img class="social__picture" scr="{{avatar}}" alt="{{name}}" width="35" height="35">
+              <p class="social__text">{{message}}</p>
+            </li>
+          </template>
+
           <!-- Кнопка для загрузки новой порции комментариев -->
-          <button type="button" class="social__comments-loader  comments-loader">Загрузить еще</button>
+          <button type="button" class="social__comments-loader  comments-loader hidden">Загрузить еще</button>
 
           <!-- Форма для отправки комментария -->
           <div class="social__footer">
@@ -213,7 +223,7 @@
     <section class="error">
       <div class="error__inner">
         <h2 class="error__title">Ошибка загрузки файла</h2>
-        <button type="button" class="error__button">Попробовать ещё раз</button>
+        <button type="button" class="error__button">Загрузить другой файл</button>
       </div>
     </section>
   </template>
@@ -227,8 +237,14 @@
       </div>
     </section>
   </template>
-  <script src="./vendor/pristine/pristine.min.js"></script>
-  <script src="./vendor/nouislider/nouislider.js"></script>
-  <script src="js/main.js" type="module"></script>
+
+  <!-- Экран загрузки изображения -->
+  <template id="messages">
+    <div class="img-upload__message  img-upload__message--loading">Загружаем...</div>
+  </template>
+
+  <script src='vendor/pristine/pristine.min.js'></script>
+  <script src="vendor/nouislider/nouislider.js"></script>
+  <script type="module" src ='js/main.js'></script>
 </body>
 </html>
