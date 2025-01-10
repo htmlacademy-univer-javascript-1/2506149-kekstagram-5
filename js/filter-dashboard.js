@@ -6,16 +6,16 @@ const HIDDEN_FILTER_CLASS = 'img-filters--inactive';
 const TIMEOUT_DELAY = 500;
 
 const filterContainerElement = document.querySelector('.img-filters');
-const defaultFilterElement = document.querySelector('#filter-default');
-const randomFilterElement = document.querySelector('#filter-random');
-const discussedFilterElement = document.querySelector('#filter-discussed');
+const defaultFilterElement = filterContainerElement.querySelector('#filter-default');
+const randomFilterElement = filterContainerElement.querySelector('#filter-random');
+const discussedFilterElement = filterContainerElement.querySelector('#filter-discussed');
 
-const debounce = (callback) => {
+const debounce = (callback, delay = TIMEOUT_DELAY) => {
   let timeoutId;
 
-  return (...rest) => {
+  return (...args) => {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => callback.apply(this, rest), TIMEOUT_DELAY);
+    timeoutId = setTimeout(() => callback(...args), delay);
   };
 };
 
@@ -53,24 +53,34 @@ const filterMethod = {
 const removePhotos = () => document.querySelectorAll('.picture').forEach((photo) => photo.remove());
 
 const changePhotos = (photos, filter) => {
-  removePhotos();
   const currentFilter = document.querySelector(`.${ACTIVE_FILTER_CLASS}`);
   currentFilter.classList.remove(ACTIVE_FILTER_CLASS);
-  renderGallery(photos);
   filter.classList.add(ACTIVE_FILTER_CLASS);
+
+  return () => {
+    removePhotos();
+    renderGallery(photos);
+  };
 };
 
 export const showFilteredPhotos = (miniatures) => {
   renderGallery(miniatures);
   filterContainerElement.classList.remove(HIDDEN_FILTER_CLASS);
 
-  defaultFilterElement.addEventListener('click', debounce(() => {
-    changePhotos(filterMethod.getDefaultMiniatures(miniatures), defaultFilterElement);
-  }));
-  randomFilterElement.addEventListener('click', debounce(() => {
-    changePhotos(filterMethod.getRandomMiniatures(miniatures), randomFilterElement);
-  }));
-  discussedFilterElement.addEventListener('click', debounce(() => {
-    changePhotos(filterMethod.getDiscussedMiniatures(miniatures), discussedFilterElement);
-  }));
+  const debouncedRender = debounce((renderCallback) => renderCallback());
+
+  defaultFilterElement.addEventListener('click', () => {
+    const renderCallback = changePhotos(filterMethod.getDefaultMiniatures(miniatures), defaultFilterElement);
+    debouncedRender(renderCallback);
+  });
+
+  randomFilterElement.addEventListener('click', () => {
+    const renderCallback = changePhotos(filterMethod.getRandomMiniatures(miniatures), randomFilterElement);
+    debouncedRender(renderCallback);
+  });
+
+  discussedFilterElement.addEventListener('click', () => {
+    const renderCallback = changePhotos(filterMethod.getDiscussedMiniatures(miniatures), discussedFilterElement);
+    debouncedRender(renderCallback);
+  });
 };
